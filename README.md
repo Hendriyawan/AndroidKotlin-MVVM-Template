@@ -5,10 +5,10 @@ This repository provides an automation tool to generate boilerplate for an **And
 ## 📺 Demos
 
 ### 1. Generate Mason Bricks
-![Generate Mason Bricks](run_script_generate_template.mov)
+<video src="run_script_generate_template.mov" width="100%" controls></video>
 
 ### 2. Execute Templates in Project
-![Execute Templates](run_make_to_project.mov)
+<video src="run_make_to_project.mov" width="100%" controls></video>
 
 With this tool, you no longer need to waste time manually creating repetitive setups or writing the Clean Architecture folder structure in your Android Kotlin project.
 
