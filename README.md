@@ -2,6 +2,14 @@
 
 This repository provides an automation tool to generate boilerplate for an **Android Clean Architecture + MVVM** project using [Mason CLI](https://github.com/felangel/mason). 
 
+## 📺 Demos
+
+### 1. Generate Mason Bricks
+![Generate Mason Bricks](run_script_generate_template.mov)
+
+### 2. Execute Templates in Project
+![Execute Templates](run_make_to_project.mov)
+
 With this tool, you no longer need to waste time manually creating repetitive setups or writing the Clean Architecture folder structure in your Android Kotlin project.
 
 ## 🚀 Features

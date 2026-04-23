@@ -674,4 +674,4 @@ class {{feature_name.pascalCase()}}RepositoryImplTest {
 }
 """)
 
-print(f"✅ Selesai! Brick mandiri dengan Gradle lengkap dibuat di {base_templates_dir}!")
+print(f"✅ Completed! Standalone brick with full Gradle setup has been created at {base_templates_dir}!")
