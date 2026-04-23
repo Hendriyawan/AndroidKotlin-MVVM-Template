@@ -70,7 +70,7 @@ Mason will prompt you for:
 
 Or run it directly with arguments:
 ```bash
-mason make android_feature -c package_name=com.example.myapp -c feature_name=Article
+mason make android_feature --package_name=com.example.myapp --feature_name=Article
 ```
 
 This will automatically create the following folder hierarchy and files:
