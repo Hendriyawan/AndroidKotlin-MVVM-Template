@@ -403,7 +403,9 @@ import javax.inject.Singleton
 abstract class NetworkModule {
     @Binds @Singleton abstract fun bindNetworkMonitor(obs: ConnectivityObserver): NetworkMonitor
     companion object {
-        @Provides @Singleton fun provideLoggingInterceptor() = HttpLoggingInterceptor { msg ->
+        @Provides
+        @Singleton
+        fun provideLoggingInterceptor() = HttpLoggingInterceptor { msg ->
             if (msg.trim().startsWith("{") || msg.trim().startsWith("[")) {
                 try {
                     val pretty = GsonBuilder().setPrettyPrinting().create().toJson(JsonParser.parseString(msg))
@@ -412,17 +414,23 @@ abstract class NetworkModule {
             } else d("OkHttp", msg)
         }.apply { level = HttpLoggingInterceptor.Level.BODY }
 
-        @Provides @Singleton fun provideOkHttpClient(log: HttpLoggingInterceptor) = OkHttpClient.Builder()
+        @Provides
+        @Singleton
+        fun provideOkHttpClient(log: HttpLoggingInterceptor) = OkHttpClient.Builder()
             .addInterceptor(log)
             .addInterceptor { chain ->
                 val url = chain.request().url.newBuilder().addQueryParameter("apiKey", BuildConfig.API_KEY).build()
                 chain.proceed(chain.request().newBuilder().url(url).build())
             }.build()
 
-        @Provides @Singleton fun provideRetrofit(client: OkHttpClient) = Retrofit.Builder()
+        @Provides
+        @Singleton
+        fun provideRetrofit(client: OkHttpClient) = Retrofit.Builder()
             .baseUrl(BuildConfig.BASE_URL).client(client).addConverterFactory(GsonConverterFactory.create()).build()
 
-        @Provides @Singleton fun provideApiService(r: Retrofit) = r.create(ApiService::class.java)
+        @Provides
+        @Singleton
+        fun provideApiService(r: Retrofit) = r.create(ApiService::class.java)
     }
 }
 """)
@@ -544,9 +552,8 @@ import androidx.room.Dao
 with open(f"{core_src_dir}/data/source/remote/ApiService.kt", "w") as f:
     f.write("""
 package {{package_name}}.data.source.remote
-import retrofit2.Response
-import retrofit2.http.GET
-interface ApiService { @GET("sample") suspend fun getData(): Response<Any> }
+// This is the base ApiService (currently empty)
+interface ApiService { }
 """)
 
 with open(f"{core_src_dir}/{{{{app_name.pascalCase()}}}}.kt", "w") as f:
@@ -584,8 +591,11 @@ create_dir(f"{feature_src_dir}/domain/model/{{{{feature_name.snakeCase()}}}}")
 create_dir(f"{feature_src_dir}/domain/repository")
 create_dir(f"{feature_src_dir}/domain/usecase/{{{{feature_name.snakeCase()}}}}")
 create_dir(f"{feature_src_dir}/presenter/{{{{feature_name.snakeCase()}}}}")
+create_dir(f"{feature_src_dir}/core/di")
 create_dir(f"{test_src_dir}/data/repository")
 
+
+# RESPONSE DTO
 with open(f"{feature_src_dir}/data/source/remote/dto/{{{{feature_name.pascalCase()}}}}ResponseDto.kt", "w") as f:
     f.write("""
 package {{package_name}}.data.source.remote.dto
@@ -597,6 +607,46 @@ data class {{feature_name.pascalCase()}}ResponseDto(
 data class {{feature_name.pascalCase()}}Dto(@field:SerializedName("title") val title: String? = null, @field:SerializedName("url") val url: String? = null)
 """)
 
+
+# FEATURE API SERVICE
+with open(f"{feature_src_dir}/data/source/remote/{{{{feature_name.pascalCase()}}}}ApiService.kt", "w") as f:
+    f.write("""
+package {{package_name}}.data.source.remote
+import retrofit2.Response
+import retrofit2.http.GET
+import {{package_name}}.data.source.remote.dto.{{feature_name.pascalCase()}}ResponseDto
+
+interface {{feature_name.pascalCase()}}ApiService {
+    @GET("sample")
+    suspend fun get{{feature_name.pascalCase()}}Data(): Response<{{feature_name.pascalCase()}}ResponseDto>
+}
+""")
+
+
+# FEATURE DI MODULE
+with open(f"{feature_src_dir}/core/di/{{{{feature_name.pascalCase()}}}}Module.kt", "w") as f:
+    f.write("""
+package {{package_name}}.core.di
+import {{package_name}}.data.source.remote.{{feature_name.pascalCase()}}ApiService
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object {{feature_name.pascalCase()}}Module {
+    @Provides
+    @Singleton
+    fun provide{{feature_name.pascalCase()}}ApiService(retrofit: Retrofit): {{feature_name.pascalCase()}}ApiService =
+        retrofit.create({{feature_name.pascalCase()}}ApiService::class.java)
+}
+""")
+
+
+# MAPPER
 with open(f"{feature_src_dir}/data/mapper/{{{{feature_name.pascalCase()}}}}Mapper.kt", "w") as f:
     f.write("""
 package {{package_name}}.data.mapper
@@ -606,6 +656,8 @@ fun {{feature_name.pascalCase()}}ResponseDto.toDomain() = {{feature_name.pascalC
 fun {{feature_name.pascalCase()}}Dto.toDomain() = {{feature_name.pascalCase()}}(url = url.orEmpty(), title = title)
 """)
 
+
+# DOMAIN MODEL
 with open(f"{feature_src_dir}/domain/model/{{{{feature_name.snakeCase()}}}}/{{{{feature_name.pascalCase()}}}}.kt", "w") as f:
     f.write("""
 package {{package_name}}.domain.model.{{feature_name.snakeCase()}}
@@ -615,6 +667,8 @@ import kotlinx.parcelize.Parcelize
 data class {{feature_name.pascalCase()}}Result(val items: List<{{feature_name.pascalCase()}}> = emptyList())
 """)
 
+
+# DOMAIN REPOSITORY
 with open(f"{feature_src_dir}/domain/repository/{{{{feature_name.pascalCase()}}}}Repository.kt", "w") as f:
     f.write("""
 package {{package_name}}.domain.repository
@@ -624,18 +678,44 @@ import kotlinx.coroutines.flow.Flow
 interface {{feature_name.pascalCase()}}Repository { fun getData(): Flow<Resource<{{feature_name.pascalCase()}}Result>> }
 """)
 
+
+# DATA REPOSITORY IMPL
 with open(f"{feature_src_dir}/data/repository/{{{{feature_name.pascalCase()}}}}RepositoryImpl.kt", "w") as f:
     f.write("""
 package {{package_name}}.data.repository
-import {{package_name}}.data.source.remote.ApiService
+import {{package_name}}.core.utils.NetworkMonitor
+import {{package_name}}.data.source.remote.{{feature_name.pascalCase()}}ApiService
 import {{package_name}}.domain.repository.{{feature_name.pascalCase()}}Repository
 import javax.inject.Inject
 import {{package_name}}.data.mapper.toDomain
-class {{feature_name.pascalCase()}}RepositoryImpl @Inject constructor(private val api: ApiService) : {{feature_name.pascalCase()}}Repository, ResponseHelper() {
-    override fun getData() = saveApiCall { api.getData() as retrofit2.Response<{{package_name}}.data.source.remote.dto.{{feature_name.pascalCase()}}ResponseDto> }
+import {{package_name}}.domain.model.Resource
+import {{package_name}}.domain.model.{{feature_name.snakeCase()}}.{{feature_name.pascalCase()}}Result
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
+class {{feature_name.pascalCase()}}RepositoryImpl @Inject constructor(private val api: {{feature_name.pascalCase()}}ApiService, private val networkMonitor: NetworkMonitor) : {{feature_name.pascalCase()}}Repository, ResponseHelper() {
+    override fun getData(): Flow<Resource<{{feature_name.pascalCase()}}Result>> = flow {
+        emit(Resource.Loading())
+        if(networkMonitor.isCurrentlyOnline()){
+            val response = saveApiCall { api.get{{feature_name.pascalCase()}}Data() }
+            response.collect { resource ->
+                when(resource){
+                    is Resource.Success ->
+                        emit(Resource.Success(resource.data?.toDomain() ?: {{feature_name.pascalCase()}}Result()))
+                    is Resource.Error ->
+                        emit(Resource.Error(resource.message ?: "Failed to connect API"))
+                    is Resource.Loading -> Unit
+                }
+            }
+        } else {
+            emit(Resource.Error("No internet connection"))
+        }
+    }   
 }
 """)
 
+
+# DOMAIN USECASE
 with open(f"{feature_src_dir}/domain/usecase/{{{{feature_name.snakeCase()}}}}/{{{{feature_name.pascalCase()}}}}UseCases.kt", "w") as f:
     f.write("""
 package {{package_name}}.domain.usecase.{{feature_name.snakeCase()}}
@@ -646,16 +726,37 @@ class Get{{feature_name.pascalCase()}}UseCase @Inject constructor(private val re
 }
 """)
 
+
+# PRESENTER VIEWMODEL
 with open(f"{feature_src_dir}/presenter/{{{{feature_name.snakeCase()}}}}/{{{{feature_name.pascalCase()}}}}ViewModel.kt", "w") as f:
     f.write("""
 package {{package_name}}.presenter.{{feature_name.snakeCase()}}
 import androidx.lifecycle.*
+import {{package_name}}.domain.model.Resource
+import {{package_name}}.domain.model.{{feature_name.snakeCase()}}.{{feature_name.pascalCase()}}Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import {{package_name}}.domain.usecase.{{feature_name.snakeCase()}}.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
-@HiltViewModel class {{feature_name.pascalCase()}}ViewModel @Inject constructor(private val getUseCase: Get{{feature_name.pascalCase()}}UseCase) : ViewModel() { }
+
+@HiltViewModel class {{feature_name.pascalCase()}}ViewModel @Inject constructor(private val getUseCase: Get{{feature_name.pascalCase()}}UseCase) : ViewModel() {
+
+    private val _state = MutableStateFlow<Resource<{{feature_name.pascalCase()}}Result>>(Resource.Loading())
+    val state = _state.asStateFlow()
+    fun doSomething(url: String) {
+        viewModelScope.launch {
+            getUseCase.invoke().collect { result ->
+                _state.value = result
+            }
+        }
+    }
+}
 """)
 
+
+# TEST
 with open(f"{test_src_dir}/data/repository/{{{{feature_name.pascalCase()}}}}RepositoryImplTest.kt", "w") as f:
     f.write("""
 package {{package_name}}.data.repository
@@ -667,8 +768,10 @@ class {{feature_name.pascalCase()}}RepositoryImplTest {
     private lateinit var repository: {{feature_name.pascalCase()}}RepositoryImpl
     @Before fun setup() {
         val log = HttpLoggingInterceptor {}.apply { level = HttpLoggingInterceptor.Level.NONE }
-        val api = NetworkModule.provideApiService(NetworkModule.provideRetrofit(NetworkModule.provideOkHttpClient(log)))
-        repository = {{feature_name.pascalCase()}}RepositoryImpl(api)
+        val r = NetworkModule.provideRetrofit(NetworkModule.provideOkHttpClient(log))
+        val api = NetworkModule.provideApiService(r)
+        val monitor = ConnectivityObserver(null!!) // Mock or real context if needed, usually mocked in tests
+        repository = {{feature_name.pascalCase()}}RepositoryImpl(api, monitor)
     }
     @Test fun testFetch() = runTest { }
 }
